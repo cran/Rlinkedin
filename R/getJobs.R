@@ -15,6 +15,7 @@
 #' @param token Authorization token.
 #' @param suggestions TRUE or FALSE. If TRUE, it will return LinkedIn's job recommendations.
 #' @param bookmarks TRUE or FALSE. If TRUE, it will return jobs you've bookmarked on LinkedIn.
+#' @param partner Indicate whether you belong to the Partnership Program. Values: 0 or 1
 #' 
 #' @return Returns a dataframe of recommended or bookmarked jobs.
 #' 
@@ -31,8 +32,14 @@
 #' @export
 
 
-getJobs <- function(token, suggestions=NULL, bookmarks=NULL)
+getJobs <- function(token, suggestions=NULL, bookmarks=NULL, partner = 0)
 { 
+  
+  if(partner == 0){
+    stop("This function is no longer available through LinkedIn's open API.  \n
+  If you are a member of the Partnership Program, set the 'partner' input of this function equal to 1 (default: 0).")
+  }
+  
   
   if(!is.null(suggestions) && !is.null(bookmarks) || is.null(suggestions) && is.null(bookmarks)){
     print("Please select either suggestions or bookmarks")
@@ -42,6 +49,10 @@ getJobs <- function(token, suggestions=NULL, bookmarks=NULL)
   url <- "http://api.linkedin.com/v1/people/~/suggestions/job-suggestions"
   query <- GET(url, config(token = token))
   q.content <- content(query)
+  xml <- xmlTreeParse(q.content, useInternalNodes=TRUE)
+  if(!is.na(xml[["number(//error/status)"]]==404)){
+    stop(xml[["string(//error/message)"]])
+  }
   q.df <- jobRecsToDF(q.content)
   return(q.df)
   }
@@ -50,6 +61,10 @@ getJobs <- function(token, suggestions=NULL, bookmarks=NULL)
     url <- "https://api.linkedin.com/v1/people/~/job-bookmarks"
     query <- GET(url, config(token = token))
     q.content <- content(query)
+    xml <- xmlTreeParse(q.content, useInternalNodes=TRUE)
+    if(!is.na(xml[["number(//error/status)"]]==404)){
+      stop(xml[["string(//error/message)"]])
+    }
     q.df <- jobBookmarksToDF(q.content)
     return(q.df)
   }
